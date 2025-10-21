@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm run vercel-build",
   "functions": {
     "pages/api/mupdf/convert-page.ts": {
       "memory": 2048

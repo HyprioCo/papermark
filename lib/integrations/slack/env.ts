@@ -11,20 +11,27 @@ type SlackEnv = z.infer<typeof envSchema>;
 
 let env: SlackEnv | undefined;
 
+export const isSlackConfigured = () => {
+  return Boolean(
+    process.env.SLACK_APP_INSTALL_URL &&
+      process.env.SLACK_CLIENT_ID &&
+      process.env.SLACK_CLIENT_SECRET &&
+      process.env.SLACK_INTEGRATION_ID,
+  );
+};
+
 export const getSlackEnv = () => {
   if (env) {
     return env;
   }
 
-  const parsed = envSchema.safeParse(process.env);
-
-  if (!parsed.success) {
+  if (!isSlackConfigured()) {
     throw new Error(
       "Slack app environment variables are not configured properly.",
     );
   }
 
-  env = parsed.data;
+  env = envSchema.parse(process.env);
 
   return env;
 };

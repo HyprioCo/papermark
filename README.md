@@ -93,6 +93,63 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Deploying to Vercel with Neon
+
+Papermark runs well on [Vercel](https://vercel.com/) with [Neon](https://neon.tech/) as the managed PostgreSQL backend. The project already includes a `vercel.json` that sets the build command to `npm run vercel-build`, which applies Prisma migrations (`prisma migrate deploy`) before building the Next.js app.
+
+### 1. Accounts and tooling
+
+- Vercel account with access to import the Papermark repository
+- Neon account (free tier works for testing)
+- Optional services you plan to enable (Resend for email, Upstash for queues, Tinybird for analytics, etc.)
+
+### 2. Provision Neon
+
+1. Create a new Neon project (e.g., `papermark`) and keep the default `main` branch.
+2. In the **Connection Details** panel:
+   - Copy the **connection string with pooling** (under `psql (with pooling)` or similar) and use it for `POSTGRES_PRISMA_URL`.
+   - Copy the **direct connection string without pooling** (`psql` / `psql (direct)`) and use it for `POSTGRES_PRISMA_URL_NON_POOLING`.
+3. Create a separate database (e.g., `papermark_shadow`) on the same branch and copy its direct connection string. Use this for `POSTGRES_PRISMA_SHADOW_URL` so Prisma migrations have an isolated shadow database.
+4. Ensure each connection string ends with `?sslmode=require` (Neon supplies this by default). If it is missing, append it manually.
+
+### 3. Prepare environment variables
+
+Populate these variables in Vercel before deploying (Settings → Environment Variables). Duplicate them in each environment (`Preview` / `Production`) as needed.
+
+| Variable | Description |
+| --- | --- |
+| `NEXTAUTH_SECRET` | Generate with `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Production URL, e.g., `https://<project>.vercel.app` |
+| `NEXT_PUBLIC_BASE_URL` | Same as `NEXTAUTH_URL` unless using a dedicated marketing site |
+| `NEXT_PUBLIC_MARKETING_URL` | Marketing site origin (can match app URL) |
+| `NEXT_PUBLIC_APP_BASE_HOST` | Hostname without protocol (e.g., `<project>.vercel.app`) |
+| `POSTGRES_PRISMA_URL` | Neon pooled connection string |
+| `POSTGRES_PRISMA_URL_NON_POOLING` | Neon direct connection string |
+| `POSTGRES_PRISMA_SHADOW_URL` | Neon shadow DB direct connection string |
+| `BLOB_READ_WRITE_TOKEN` | Create in Vercel → Storage → Blob store; grants server write access |
+| `NEXT_PUBLIC_UPLOAD_TRANSPORT` | Leave as `vercel` for Vercel Blob |
+| `NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST` | Blob public host, e.g., `<id>.public.blob.vercel-storage.com` |
+| `RESEND_API_KEY` | Required for transactional email (optional in development) |
+| `SLACK_APP_INSTALL_URL`, `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_INTEGRATION_ID` | Optional – set only if you plan to use the Slack notification integration |
+| `PROJECT_ID_VERCEL`, `TEAM_ID_VERCEL`, `AUTH_BEARER_TOKEN` | Needed only if you plan to automate custom domain provisioning via the API |
+
+Configure optional providers (Tinybird, Google OAuth, Stripe, Upstash, Hanko, Trigger.dev, etc.) as your deployment requires.
+
+### 4. Create the Vercel project
+
+1. Import the repository into Vercel (GitHub/GitLab/Bitbucket).
+2. Set **Framework Preset** to Next.js (Vercel detects this automatically).
+3. Ensure the **Build Command** is `npm run vercel-build` (Vercel uses this automatically when present in `package.json`, but you can override it in the project settings).
+4. Verify the **Node.js version** is `18.x` or newer (Vercel default for Next.js 14).
+5. Save the environment variable configuration from step 3.
+
+### 5. First deployment checklist
+
+- Kick off a deployment. During the build Vercel will run `prisma migrate deploy` using the Neon credentials and then `next build`.
+- After the deployment finishes, run `npm run dev:prisma` locally (against the same Neon database) if you add new migrations later.
+- Visit the deployed URL to confirm authentication and document upload flows work.
+- (Optional) Attach a custom domain in Vercel once DNS is ready.
+
 ## Tinybird Instructions
 
 To prepare the Tinybird database, follow these steps:

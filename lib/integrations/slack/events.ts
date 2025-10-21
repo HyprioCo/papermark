@@ -1,19 +1,23 @@
 import prisma from "@/lib/prisma";
 
 import { SlackClient } from "./client";
-import { getSlackEnv } from "./env";
+import { getSlackEnv, isSlackConfigured } from "./env";
 import { createSlackMessage } from "./templates";
 import { SlackEventData, SlackIntegrationServer } from "./types";
 
 export class SlackEventManager {
-  private client: SlackClient;
+  private client: SlackClient | null;
 
   constructor() {
-    this.client = new SlackClient();
+    this.client = isSlackConfigured() ? new SlackClient() : null;
   }
 
   async processEvent(eventData: SlackEventData): Promise<void> {
     try {
+      if (!this.client || !isSlackConfigured()) {
+        return;
+      }
+
       const env = getSlackEnv();
 
       const integration = await prisma.installedIntegration.findUnique({
@@ -35,6 +39,7 @@ export class SlackEventManager {
       }
 
       await this.sendSlackNotification(
+        this.client,
         eventData,
         integration as SlackIntegrationServer,
       );
@@ -47,6 +52,7 @@ export class SlackEventManager {
    * Send slack notification for an event
    */
   private async sendSlackNotification(
+    client: SlackClient,
     eventData: SlackEventData,
     integration: SlackIntegrationServer,
   ): Promise<void> {
@@ -68,7 +74,7 @@ export class SlackEventManager {
               ...message,
               channel: channel.id,
             };
-            await this.client.sendMessage(
+            await client.sendMessage(
               integration.credentials.accessToken,
               slackMessage,
             );

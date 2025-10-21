@@ -62,3 +62,6 @@ lib/emails/marketing
 
 # changelog
 changelog
+.env.example
+.gitignore
+old_env
