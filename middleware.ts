@@ -20,6 +20,9 @@ function isAnalyticsPath(path: string) {
 }
 
 function isCustomDomain(host: string) {
+  // Custom domains are used for document viewing (datarooms)
+  // Main app domains (papermark.com, papermark.io, hyprio.com, vercel.app) are NOT custom domains
+  // This ensures they go through AppMiddleware for authentication instead of DomainMiddleware
   return (
     (process.env.NODE_ENV === "development" &&
       (host?.includes(".local") || host?.includes("papermark.dev"))) ||

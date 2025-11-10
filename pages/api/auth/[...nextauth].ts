@@ -194,8 +194,36 @@ export const authOptions: NextAuthOptions = {
 };
 
 const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
+  // Determine cookie domain based on request host
+  const host = req.headers.host || "";
+  let cookieDomain: string | undefined = undefined;
+  
+  if (VERCEL_DEPLOYMENT) {
+    // If host includes hyprio.com, use .hyprio.com as cookie domain
+    if (host.includes("hyprio.com")) {
+      cookieDomain = ".hyprio.com";
+    } else if (host.includes("papermark.com") || host.includes("papermark.io")) {
+      cookieDomain = ".papermark.com";
+    }
+    // For vercel.app domains, don't set a domain (let browser handle it)
+    // This allows cookies to work on the vercel.app domain
+  }
+
   return {
     ...authOptions,
+    cookies: {
+      sessionToken: {
+        name: `${VERCEL_DEPLOYMENT ? "__Secure-" : ""}next-auth.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          // When working on localhost, the cookie domain must be omitted entirely (https://stackoverflow.com/a/1188145)
+          domain: cookieDomain,
+          secure: VERCEL_DEPLOYMENT,
+        },
+      },
+    },
     callbacks: {
       ...authOptions.callbacks,
       signIn: async ({ user }) => {
