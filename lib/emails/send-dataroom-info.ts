@@ -35,3 +35,4 @@ export const sendDataroomInfoEmail = async (
     console.error(e);
   }
 };
+

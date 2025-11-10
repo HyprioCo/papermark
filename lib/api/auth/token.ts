@@ -12,3 +12,4 @@ export const hashToken = (
     .update(`${token}${noSecret ? "" : process.env.NEXTAUTH_SECRET}`)
     .digest("hex");
 };
+
